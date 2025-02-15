@@ -91,16 +91,19 @@ def db_change_password(interaction: discord.Interaction, form):
 
 
 class RankingsState:
+    page_size: int
     page: int
     job: int
-    def __init__(self, page: int, job: int):
+    def __init__(self, page: int, job: int, page_size: int = 10):
         self.page = page
         self.job = job
+        self.page_size = page_size
 
-def db_query_rankings(page_size: int, state: RankingsState, offset: int, cur: mariadb.Cursor):
+def db_query_rankings(state: RankingsState, cur: mariadb.Cursor, offset: int):
     job_condition = ''
     job = state.job
     page = state.page
+    page_size = state.page_size
     order_by_fame = job == 2000
     filter_by_job = job != None and order_by_fame == False
 
@@ -138,7 +141,47 @@ def db_query_rankings(page_size: int, state: RankingsState, offset: int, cur: ma
 
     return (content, pages)
 
-def db_query_monstercard_rankings(page_size: int, cur: mariadb.Cursor, offset: int, page: int):
+def db_query_quest_rankings(state: RankingsState, cur: mariadb.Cursor, offset: int):
+    page = state.page
+    page_size = state.page_size
+
+    sel_query = f"""
+        SELECT `characters`.`name`, `characters`.`level`, `characters`.job, `characters`.`exp`, COUNT(*)
+        FROM character_quests
+        JOIN characters ON `characters`.ID = `character_quests`.charid
+        JOIN users ON `characters`.userid = `users`.ID
+        WHERE users.admin = 0 AND characters.deleted_at IS NULL AND character_quests.`data` = 'end'
+        GROUP BY charid
+        ORDER BY COUNT(*) DESC, `characters`.`level` DESC, `characters`.`exp` DESC
+    """
+
+    cur.execute(f"SELECT COUNT(*) FROM ({sel_query}) as derived")
+    count = cur.fetchone()[0]
+    pages = math.ceil(count / page_size)
+    cur.execute(f"""
+        {sel_query}
+        LIMIT %s
+        OFFSET %s
+    """, (page_size, offset))
+    results = cur.fetchall()
+    rank_offset = (page - 1) * page_size
+    if (len(results) > 0):
+        body = map(lambda x: [rank_offset + x[0] + 1, x[1][0], f"Lv. {x[1][1]} {job_name(x[1][2])}", x[1][4]], enumerate(results))
+        content = t2a(
+            header=['#', 'IGN', 'Job', 'Quests completed'],
+            body=body,
+            style=PresetStyle.ascii_rounded_box,
+        )
+
+        content = f"```{content}```"
+    else:
+        content = 'No results!'
+
+    return (content, pages)
+
+def db_query_monstercard_rankings(state: RankingsState, cur: mariadb.Cursor, offset: int):
+    page_size = state.page_size
+    page = state.page
     sel_query = """
         SELECT `characters`.`name`, `characters`.`level`, `characters`.job, `characters`.`exp`, SUM(`monsterbook`.`count`)
         FROM monsterbook

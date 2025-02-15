@@ -1,14 +1,10 @@
 import mariadb
-import math
-from typing import Literal
 import discord
 import os
 from discord import app_commands, ButtonStyle
 from dotenv import load_dotenv
-from utils import job_name
 from ui import RegisterButton, ResetPasswordButton, DownloadButton
-from db import RankingsState, db_connect, db_query_monstercard_rankings, db_query_rankings
-from table2ascii import table2ascii as t2a, PresetStyle
+from db import RankingsState, db_connect, db_query_monstercard_rankings, db_query_quest_rankings, db_query_rankings
 
 # Load environment variables from .env file
 load_dotenv()
@@ -26,8 +22,6 @@ tree = app_commands.CommandTree(client)
 guild = discord.Object(id=SERVER_ID)
 
 ephemerals = {}
-
-page_size = 10
 
 class PageButton(discord.ui.Button):
     state: RankingsState
@@ -57,7 +51,8 @@ class JobFilterButton(discord.ui.Button):
 async def show_rankings(interaction: discord.Interaction, state: RankingsState, initial: bool = False):
     page = state.page
     job = state.job
-    
+    page_size = state.page_size
+
     print(f"Fetching rankings, page {page}...")
 
     try:
@@ -65,9 +60,11 @@ async def show_rankings(interaction: discord.Interaction, state: RankingsState, 
         offset = (page-1) * page_size
 
         if job == 1000:
-            (content, pages) = db_query_monstercard_rankings(page_size, cur, offset, page)
+            (content, pages) = db_query_monstercard_rankings(state, cur, offset)
+        elif job == 3000:
+            (content, pages) = db_query_quest_rankings(state, cur, offset)
         else:
-            (content, pages) = db_query_rankings(page_size, state, offset, cur)
+            (content, pages) = db_query_rankings(state, cur, offset)
 
         rankings_view = discord.ui.View(timeout=None)
 
@@ -91,6 +88,7 @@ async def show_rankings(interaction: discord.Interaction, state: RankingsState, 
         filter_view.add_item(JobFilterButton(RankingsState(page, 0), 'Beginner', ButtonStyle.primary if job == 0 else ButtonStyle.secondary))
         filter_view.add_item(JobFilterButton(RankingsState(page, 1000), 'Monsterbook', ButtonStyle.primary if job == 1000 else ButtonStyle.secondary))
         filter_view.add_item(JobFilterButton(RankingsState(page, 2000), 'Fame', ButtonStyle.primary if job == 2000 else ButtonStyle.secondary))
+        filter_view.add_item(JobFilterButton(RankingsState(page, 3000), 'Quests', ButtonStyle.primary if job == 3000 else ButtonStyle.secondary))
 
         if initial:
             await interaction.response.send_message(view=filter_view, ephemeral=True)
