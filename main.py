@@ -4,7 +4,7 @@ import os
 from discord import app_commands, ButtonStyle
 from dotenv import load_dotenv
 from ui import RegisterButton, ResetPasswordButton, DownloadButton
-from db import RankingsState, db_connect, db_query_monstercard_rankings, db_query_quest_rankings, db_query_rankings
+from db import RankingsState, db_connect, db_query_monstercard_rankings, db_query_quest_rankings, db_query_rankings, db_query_omok_rankings, db_query_matchcard_rankings
 
 # Load environment variables from .env file
 load_dotenv()
@@ -63,6 +63,10 @@ async def show_rankings(interaction: discord.Interaction, state: RankingsState, 
             (content, pages) = db_query_monstercard_rankings(state, cur, offset)
         elif job == 3000:
             (content, pages) = db_query_quest_rankings(state, cur, offset)
+        elif job == 4000:
+            (content, pages) = db_query_omok_rankings(state, cur, offset)
+        elif job == 5000:
+            (content, pages) = db_query_matchcard_rankings(state, cur, offset)
         else:
             (content, pages) = db_query_rankings(state, cur, offset)
 
@@ -89,6 +93,8 @@ async def show_rankings(interaction: discord.Interaction, state: RankingsState, 
         filter_view.add_item(JobFilterButton(RankingsState(page, 1000), 'Monsterbook', ButtonStyle.primary if job == 1000 else ButtonStyle.secondary))
         filter_view.add_item(JobFilterButton(RankingsState(page, 2000), 'Fame', ButtonStyle.primary if job == 2000 else ButtonStyle.secondary))
         filter_view.add_item(JobFilterButton(RankingsState(page, 3000), 'Quests', ButtonStyle.primary if job == 3000 else ButtonStyle.secondary))
+        filter_view.add_item(JobFilterButton(RankingsState(page, 4000), 'Omok', ButtonStyle.primary if job == 4000 else ButtonStyle.secondary))
+        filter_view.add_item(JobFilterButton(RankingsState(page, 5000), 'Matchcard', ButtonStyle.primary if job == 5000 else ButtonStyle.secondary))
 
         if initial:
             await interaction.response.send_message(view=filter_view, ephemeral=True)
