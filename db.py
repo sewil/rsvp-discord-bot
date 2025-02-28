@@ -14,6 +14,7 @@ DB_HOST = os.getenv("DB_HOST")
 DB_NAME = os.getenv("DB_NAME")
 DB_USER = os.getenv("DB_USER")
 DB_PASS = os.getenv("DB_PASS")
+REGISTER_GM_LEVEL = os.getenv("REGISTER_GM_LEVEL") or 0
 
 def db_connect():
     cnx = mariadb.connect(
@@ -46,7 +47,7 @@ def db_register(interaction: discord.Interaction, form):
 
         cur.execute(
             "INSERT INTO users (username, password, email, gender, admin, char_delete_password) VALUES (%s, %s, %s, %s, %s, %s)",
-            (form.username.value, hashed_password, user_id, 10, 0, dob_formatted)
+            (form.username.value, hashed_password, user_id, 10, REGISTER_GM_LEVEL, dob_formatted)
         )
         cnx.commit()
 
