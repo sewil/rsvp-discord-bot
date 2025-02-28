@@ -2,8 +2,9 @@ import mariadb
 import os
 import discord
 import bcrypt
-from utils import db_format_dob, job_name
+from utils import db_format_dob, job_name, get_ban_reason
 from dotenv import load_dotenv
+from datetime import datetime
 import math
 from table2ascii import table2ascii as t2a, PresetStyle
 
@@ -288,3 +289,30 @@ def db_query_monstercard_rankings(state: RankingsState, cur: mariadb.Cursor, off
     else:
         content = 'No results!'
     return (content, pages)
+
+def db_query_user(discord_id: int):
+    try:
+        (cnx, cur) = db_connect()
+        cur.execute(f"""
+            SELECT * FROM users
+            WHERE LOWER(email) = LOWER(%s)
+        """, (discord_id,))
+        user = cur.fetchone()
+        if user == None:
+            return "User not found!"
+        
+        banned_until = None
+        ban_reason = ''
+        if user[9] > datetime.now():
+            banned_until = datetime.strftime(user[9], "%Y-%m-%d %H:%M")
+            ban_reason = get_ban_reason(user[10])
+            
+        registered_at = datetime.strftime(user[19], "%Y-%m-%d %H:%M")
+
+        return f'Found account {user[1]} (userid {user[0]}). GM Level: {user[7]}. Account registered at {registered_at}.{f" Banned until {banned_until} for {ban_reason}." if banned_until != None else ""}'
+    except mariadb.Error as e:
+        print(f"Database error occurred: {e}")
+        return 'An unknown error occurred, please try again later!'
+    finally:
+        if 'cur' in locals(): cur.close()
+        if 'cnx' in locals(): cnx.close()

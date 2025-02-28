@@ -4,7 +4,7 @@ import os
 from discord import app_commands, ButtonStyle
 from dotenv import load_dotenv
 from ui import RegisterButton, ResetPasswordButton, DownloadButton
-from db import RankingsState, db_connect, db_query_monstercard_rankings, db_query_quest_rankings, db_query_rankings, db_query_omok_rankings, db_query_matchcard_rankings
+from db import RankingsState, db_connect, db_query_monstercard_rankings, db_query_quest_rankings, db_query_rankings, db_query_omok_rankings, db_query_matchcard_rankings, db_query_user
 
 # Load environment variables from .env file
 load_dotenv()
@@ -14,6 +14,8 @@ SERVER_ID = os.getenv("DISCORD_SERVER_ID")
 CHANNEL_ACCESS_ID = int(os.getenv("DISCORD_CHANNEL_ACCESS_ID"))
 CHANNEL_RANKINGS_ID = int(os.getenv("DISCORD_CHANNEL_RANKINGS_ID"))
 DOWNLOAD_URL = os.getenv("DISCORD_DOWNLOAD_URL")
+GM_ROLE = int(os.getenv("DISCORD_GM_ROLE"))
+GM_INTERN_ROLE = int(os.getenv("DISCORD_GM_INTERN_ROLE"))
 
 # Initialize the bot
 intents = discord.Intents.default()
@@ -114,6 +116,12 @@ async def show_rankings(interaction: discord.Interaction, state: RankingsState, 
     finally:
         if 'cur' in locals(): cur.close()
         if 'cnx' in locals(): cnx.close()
+
+@app_commands.checks.has_any_role(GM_ROLE, GM_INTERN_ROLE)
+@tree.command(name='userinfo', description='Check user info.', guild=guild)
+async def getUserInfo(interaction: discord.Interaction, user: discord.User):
+    message = db_query_user(user.id)
+    await interaction.response.send_message(message, ephemeral=True)
 
 def is_me(member):
     return member.author == client.user

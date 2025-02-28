@@ -33,3 +33,15 @@ def validate_dob(dob: str):
 
 def db_format_dob(dob: str):
     return int(dob.replace("-", ""))
+
+def get_ban_reason(reason: int):
+    if reason == 1: return 'hacking'
+    elif reason == 2: return 'botting'
+    elif reason == 3: return 'advertising'
+    elif reason == 4: return 'harassment'
+    elif reason == 5: return 'bad language'
+    elif reason == 6: return 'scamming'
+    elif reason == 7: return 'misconduct'
+    elif reason == 8: return 'illegal cash transaction'
+    elif reason == 9: return 'illegal charging/funding'
+    else: return 'N/A'
