@@ -1,10 +1,11 @@
 import mariadb
 import discord
+from typing import Union
 import os
 from discord import app_commands, ButtonStyle
 from dotenv import load_dotenv
 from ui import RegisterButton, ResetPasswordButton, DownloadButton
-from db import RankingsState, db_connect, db_query_monstercard_rankings, db_query_quest_rankings, db_query_rankings, db_query_omok_rankings, db_query_matchcard_rankings, db_query_user
+import db
 
 # Load environment variables from .env file
 load_dotenv()
@@ -26,8 +27,8 @@ guild = discord.Object(id=SERVER_ID)
 ephemerals = {}
 
 class PageButton(discord.ui.Button):
-    state: RankingsState
-    def __init__(self, state: RankingsState, style: ButtonStyle = discord.ButtonStyle.secondary):
+    state: db.RankingsState
+    def __init__(self, state: db.RankingsState, style: ButtonStyle = discord.ButtonStyle.secondary):
         super().__init__(label=f'{state.page}', style=style)
         self.state = state
 
@@ -39,18 +40,18 @@ class RankingsButton(discord.ui.Button):
         super().__init__(label='Show server rankings', style=ButtonStyle.primary)
 
     async def callback(self, interaction: discord.Interaction):
-        await show_rankings(interaction, RankingsState(1, None), True)
+        await show_rankings(interaction, db.RankingsState(1, None), True)
 
 class JobFilterButton(discord.ui.Button):
-    state: RankingsState
-    def __init__(self, state: RankingsState, label: str, style: ButtonStyle = discord.ButtonStyle.secondary):
+    state: db.RankingsState
+    def __init__(self, state: db.RankingsState, label: str, style: ButtonStyle = discord.ButtonStyle.secondary):
         super().__init__(label=label, style=style)
         self.state = state
 
     async def callback(self, interaction: discord.Interaction):
         await show_rankings(interaction, self.state, False)
 
-async def show_rankings(interaction: discord.Interaction, state: RankingsState, initial: bool = False):
+async def show_rankings(interaction: discord.Interaction, state: db.RankingsState, initial: bool = False):
     page = state.page
     job = state.job
     page_size = state.page_size
@@ -58,45 +59,45 @@ async def show_rankings(interaction: discord.Interaction, state: RankingsState, 
     print(f"Fetching rankings, page {page}...")
 
     try:
-        (cnx, cur) = db_connect()
+        (cnx, cur) = db.db_connect()
         offset = (page-1) * page_size
 
         if job == 1000:
-            (content, pages) = db_query_monstercard_rankings(state, cur, offset)
+            (content, pages) = db.db_query_monstercard_rankings(state, cur, offset)
         elif job == 3000:
-            (content, pages) = db_query_quest_rankings(state, cur, offset)
+            (content, pages) = db.db_query_quest_rankings(state, cur, offset)
         elif job == 4000:
-            (content, pages) = db_query_omok_rankings(state, cur, offset)
+            (content, pages) = db.db_query_omok_rankings(state, cur, offset)
         elif job == 5000:
-            (content, pages) = db_query_matchcard_rankings(state, cur, offset)
+            (content, pages) = db.db_query_matchcard_rankings(state, cur, offset)
         else:
-            (content, pages) = db_query_rankings(state, cur, offset)
+            (content, pages) = db.db_query_rankings(state, cur, offset)
 
         rankings_view = discord.ui.View(timeout=None)
 
         # Page buttons
         if page > 1:
-            rankings_view.add_item(PageButton(RankingsState(1, job)))
+            rankings_view.add_item(PageButton(db.RankingsState(1, job)))
         if page > 2:
-            rankings_view.add_item(PageButton(RankingsState(page - 1, job)))
-        rankings_view.add_item(PageButton(RankingsState(page, job), ButtonStyle.primary))
+            rankings_view.add_item(PageButton(db.RankingsState(page - 1, job)))
+        rankings_view.add_item(PageButton(db.RankingsState(page, job), ButtonStyle.primary))
         if page < pages - 1:
-            rankings_view.add_item(PageButton(RankingsState(page + 1, job)))
+            rankings_view.add_item(PageButton(db.RankingsState(page + 1, job)))
         if pages > page:
-            rankings_view.add_item(PageButton(RankingsState(pages, job)))
+            rankings_view.add_item(PageButton(db.RankingsState(pages, job)))
 
         filter_view = discord.ui.View(timeout=None)
-        filter_view.add_item(JobFilterButton(RankingsState(page, None), 'All', ButtonStyle.primary if job is None else ButtonStyle.secondary))
-        filter_view.add_item(JobFilterButton(RankingsState(page, 1), 'Warrior', ButtonStyle.primary if job == 1 else ButtonStyle.secondary))
-        filter_view.add_item(JobFilterButton(RankingsState(page, 2), 'Magician', ButtonStyle.primary if job == 2 else ButtonStyle.secondary))
-        filter_view.add_item(JobFilterButton(RankingsState(page, 3), 'Bowman', ButtonStyle.primary if job == 3 else ButtonStyle.secondary))
-        filter_view.add_item(JobFilterButton(RankingsState(page, 4), 'Thief', ButtonStyle.primary if job == 4 else ButtonStyle.secondary))
-        filter_view.add_item(JobFilterButton(RankingsState(page, 0), 'Beginner', ButtonStyle.primary if job == 0 else ButtonStyle.secondary))
-        filter_view.add_item(JobFilterButton(RankingsState(page, 1000), 'Monsterbook', ButtonStyle.primary if job == 1000 else ButtonStyle.secondary))
-        filter_view.add_item(JobFilterButton(RankingsState(page, 2000), 'Fame', ButtonStyle.primary if job == 2000 else ButtonStyle.secondary))
-        filter_view.add_item(JobFilterButton(RankingsState(page, 3000), 'Quests', ButtonStyle.primary if job == 3000 else ButtonStyle.secondary))
-        filter_view.add_item(JobFilterButton(RankingsState(page, 4000), 'Omok', ButtonStyle.primary if job == 4000 else ButtonStyle.secondary))
-        filter_view.add_item(JobFilterButton(RankingsState(page, 5000), 'Matchcard', ButtonStyle.primary if job == 5000 else ButtonStyle.secondary))
+        filter_view.add_item(JobFilterButton(db.RankingsState(page, None), 'All', ButtonStyle.primary if job is None else ButtonStyle.secondary))
+        filter_view.add_item(JobFilterButton(db.RankingsState(page, 1), 'Warrior', ButtonStyle.primary if job == 1 else ButtonStyle.secondary))
+        filter_view.add_item(JobFilterButton(db.RankingsState(page, 2), 'Magician', ButtonStyle.primary if job == 2 else ButtonStyle.secondary))
+        filter_view.add_item(JobFilterButton(db.RankingsState(page, 3), 'Bowman', ButtonStyle.primary if job == 3 else ButtonStyle.secondary))
+        filter_view.add_item(JobFilterButton(db.RankingsState(page, 4), 'Thief', ButtonStyle.primary if job == 4 else ButtonStyle.secondary))
+        filter_view.add_item(JobFilterButton(db.RankingsState(page, 0), 'Beginner', ButtonStyle.primary if job == 0 else ButtonStyle.secondary))
+        filter_view.add_item(JobFilterButton(db.RankingsState(page, 1000), 'Monsterbook', ButtonStyle.primary if job == 1000 else ButtonStyle.secondary))
+        filter_view.add_item(JobFilterButton(db.RankingsState(page, 2000), 'Fame', ButtonStyle.primary if job == 2000 else ButtonStyle.secondary))
+        filter_view.add_item(JobFilterButton(db.RankingsState(page, 3000), 'Quests', ButtonStyle.primary if job == 3000 else ButtonStyle.secondary))
+        filter_view.add_item(JobFilterButton(db.RankingsState(page, 4000), 'Omok', ButtonStyle.primary if job == 4000 else ButtonStyle.secondary))
+        filter_view.add_item(JobFilterButton(db.RankingsState(page, 5000), 'Matchcard', ButtonStyle.primary if job == 5000 else ButtonStyle.secondary))
 
         if initial:
             await interaction.response.send_message(view=filter_view, ephemeral=True)
@@ -118,9 +119,16 @@ async def show_rankings(interaction: discord.Interaction, state: RankingsState, 
         if 'cnx' in locals(): cnx.close()
 
 @app_commands.checks.has_any_role(GM_ROLE, GM_INTERN_ROLE)
-@tree.command(name='userinfo', description='Check user info.', guild=guild)
-async def getUserInfo(interaction: discord.Interaction, user: discord.User):
-    message = db_query_user(user.id)
+@tree.command(name='find', description='Find in-game user.', guild=guild)
+async def find_user(interaction: discord.Interaction, user: discord.User = None, ign: str = None):
+    if user != None:
+        query = user.id
+    elif ign != None:
+        query = ign
+    else:
+        await interaction.response.send_message('Must provide either user or ign!', ephemeral=True)
+        return
+    message = db.db_find_user(query)
     await interaction.response.send_message(message, ephemeral=True)
 
 def is_me(member):

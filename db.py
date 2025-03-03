@@ -291,13 +291,14 @@ def db_query_monstercard_rankings(state: RankingsState, cur: mariadb.Cursor, off
         content = 'No results!'
     return (content, pages)
 
-def db_query_user(discord_id: int):
+def db_find_user(query: str):
     try:
         (cnx, cur) = db_connect()
         cur.execute(f"""
-            SELECT * FROM users
-            WHERE LOWER(email) = LOWER(%s)
-        """, (discord_id,))
+            SELECT users.* FROM users
+            JOIN characters ON characters.userid = users.ID
+            WHERE LOWER(email) = LOWER(%s) OR LOWER(characters.`name`) = LOWER(%s)
+        """, (query,query))
         user = cur.fetchone()
         if user == None:
             return "User not found!"
@@ -309,8 +310,10 @@ def db_query_user(discord_id: int):
             ban_reason = get_ban_reason(user[10])
             
         registered_at = datetime.strftime(user[19], "%Y-%m-%d %H:%M")
+        
+        discord_user = f"<@{user[3]}>." if user[3] != None and len(user[3]) > 0 else 'Not found!'
 
-        return f'Found account {user[1]} (userid {user[0]}). GM Level: {user[7]}. Account registered at {registered_at}.{f" Banned until {banned_until} for {ban_reason}." if banned_until != None else ""}'
+        return f'Found user {user[1]} (userid {user[0]}). Discord user: {discord_user} GM Level: {user[7]}. Account registered at {registered_at}.{f" Banned until {banned_until} for {ban_reason}." if banned_until != None else ""}'
     except mariadb.Error as e:
         print(f"Database error occurred: {e}")
         return 'An unknown error occurred, please try again later!'
