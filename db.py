@@ -2,6 +2,7 @@ import mariadb
 import os
 import discord
 import bcrypt
+import utils
 from utils import db_format_dob, job_name, get_ban_reason
 from dotenv import load_dotenv
 from datetime import datetime
@@ -295,25 +296,37 @@ def db_find_user(query: str):
     try:
         (cnx, cur) = db_connect()
         cur.execute(f"""
-            SELECT users.* FROM users
-            JOIN characters ON characters.userid = users.ID
+            SELECT
+                users.ID, users.username, users.email, users.admin, users.ban_expire, users.ban_reason, users.created_at,
+	            characters.`name`, characters.`level`, characters.`job`
+            FROM characters
+            JOIN users ON characters.userid = users.ID
             WHERE LOWER(email) = LOWER(%s) OR LOWER(characters.`name`) = LOWER(%s)
         """, (query,query))
-        user = cur.fetchone()
-        if user == None:
+        results = cur.fetchmany()
+        if len(results) == 0:
             return "User not found!"
+        user = results[0]
+        characters = list(map(lambda row: f"{row[7]} (Lv. {row[8]} {utils.job_name(row[9])})", results))
         
         banned_until = None
         ban_reason = ''
-        if user[9] > datetime.now():
-            banned_until = datetime.strftime(user[9], "%Y-%m-%d %H:%M")
-            ban_reason = get_ban_reason(user[10])
+        if user[4] > datetime.now():
+            banned_until = datetime.strftime(user[4], "%Y-%m-%d %H:%M")
+            ban_reason = get_ban_reason(user[5])
             
-        registered_at = datetime.strftime(user[19], "%Y-%m-%d %H:%M")
+        registered_at = datetime.strftime(user[6], "%Y-%m-%d %H:%M")
         
-        discord_user = f"<@{user[3]}>." if user[3] != None and len(user[3]) > 0 else 'Not found!'
+        discord_user = f"<@{user[2]}>." if user[2] != None and len(user[2]) > 0 else 'Not found!'
 
-        return f'Found user {user[1]} (userid {user[0]}). Discord user: {discord_user} GM Level: {user[7]}. Account registered at {registered_at}.{f" Banned until {banned_until} for {ban_reason}." if banned_until != None else ""}'
+        message = f'Found user {user[1]} (userid {user[0]}). Discord user: {discord_user} GM Level: {user[3]}. Account registered at {registered_at}.{f" Banned until {banned_until} for {ban_reason}." if banned_until != None else ""}'
+        message += f'\n### Characters\n'
+        if (len(characters) == 0):
+            message += "No characters found!"
+        else:
+            for c in characters:
+                message += f'- {c}\n'
+        return message
     except mariadb.Error as e:
         print(f"Database error occurred: {e}")
         return 'An unknown error occurred, please try again later!'

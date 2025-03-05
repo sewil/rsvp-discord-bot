@@ -26,6 +26,7 @@ def job_name(job: int):
     elif job == 411: return "Hermit"
     elif job == 420: return "Bandit"
     elif job == 421: return "Chief Bandit"
+    elif job == 500: return "GM"
     else: return "N/A"
 
 def validate_dob(dob: str):
