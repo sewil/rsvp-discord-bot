@@ -303,7 +303,7 @@ def db_find_user(query: str):
             JOIN users ON characters.userid = users.ID
             WHERE characters.deleted_at IS NULL AND (LOWER(email) = LOWER(%s) OR LOWER(characters.`name`) = LOWER(%s))
         """, (query,query))
-        results = cur.fetchmany()
+        results = cur.fetchall()
         if len(results) == 0:
             return "User not found!"
         user = results[0]
