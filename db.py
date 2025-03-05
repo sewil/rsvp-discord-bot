@@ -301,7 +301,7 @@ def db_find_user(query: str):
 	            characters.`name`, characters.`level`, characters.`job`
             FROM characters
             JOIN users ON characters.userid = users.ID
-            WHERE LOWER(email) = LOWER(%s) OR LOWER(characters.`name`) = LOWER(%s)
+            WHERE characters.deleted_at IS NULL AND (LOWER(email) = LOWER(%s) OR LOWER(characters.`name`) = LOWER(%s))
         """, (query,query))
         results = cur.fetchmany()
         if len(results) == 0:
