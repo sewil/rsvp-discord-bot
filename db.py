@@ -292,22 +292,29 @@ def db_query_monstercard_rankings(state: RankingsState, cur: mariadb.Cursor, off
         content = 'No results!'
     return (content, pages)
 
+def format_char(row):
+    is_deleted = row[10] <= datetime.now() if row[10] != None else False
+    text = f"{row[7]} (Lv. {row[8]} {utils.job_name(row[9])})"
+    if is_deleted:
+        text = f"~~{text}~~"
+    return text
+
 def db_find_user(query: str):
     try:
         (cnx, cur) = db_connect()
         cur.execute(f"""
             SELECT
                 users.ID, users.username, users.email, users.admin, users.ban_expire, users.ban_reason, users.created_at,
-	            characters.`name`, characters.`level`, characters.`job`
+	            characters.`name`, characters.`level`, characters.`job`, characters.`deleted_at`
             FROM characters
             JOIN users ON characters.userid = users.ID
-            WHERE characters.deleted_at IS NULL AND (LOWER(email) = LOWER(%s) OR LOWER(characters.`name`) = LOWER(%s))
+            WHERE LOWER(email) = LOWER(%s) OR LOWER(characters.`name`) = LOWER(%s)
         """, (query,query))
         results = cur.fetchall()
         if len(results) == 0:
             return "User not found!"
         user = results[0]
-        characters = list(map(lambda row: f"{row[7]} (Lv. {row[8]} {utils.job_name(row[9])})", results))
+        characters = list(map(format_char, results))
         
         banned_until = None
         ban_reason = ''
@@ -316,6 +323,7 @@ def db_find_user(query: str):
             ban_reason = get_ban_reason(user[5])
             
         registered_at = datetime.strftime(user[6], "%Y-%m-%d %H:%M")
+        deleted_at = user[10]
         
         discord_user = f"<@{user[2]}>." if user[2] != None and len(user[2]) > 0 else 'Not found!'
 
