@@ -120,15 +120,11 @@ async def show_rankings(interaction: discord.Interaction, state: db.RankingsStat
 
 @app_commands.checks.has_any_role(GM_ROLE, GM_INTERN_ROLE)
 @tree.command(name='find', description='Find in-game user.', guild=guild)
-async def find_user(interaction: discord.Interaction, user: discord.User = None, ign: str = None):
-    if user != None:
-        query = user.id
-    elif ign != None:
-        query = ign
-    else:
-        await interaction.response.send_message('Must provide either user or ign!', ephemeral=True)
+async def find_user(interaction: discord.Interaction, user: discord.User = None, charname: str = None, username: str = None):
+    if user == None and charname == None and username == None:
+        await interaction.response.send_message('Must provide either discord user, charname or username!', ephemeral=True)
         return
-    message = db.db_find_user(query)
+    message = db.db_find_user(str(user.id) if user != None else None, charname, username)
     await interaction.response.send_message(message, ephemeral=True)
 
 def is_me(member):

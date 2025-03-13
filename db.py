@@ -299,7 +299,7 @@ def format_char(row):
         text = f"~~{text}~~"
     return text
 
-def db_find_user(query: str):
+def db_find_user(discord_id: str = None, charname: str = None, username: str = None):
     try:
         (cnx, cur) = db_connect()
         cur.execute(f"""
@@ -308,13 +308,16 @@ def db_find_user(query: str):
 	            characters.`name`, characters.`level`, characters.`job`, characters.`deleted_at`, characters.ID
             FROM users
             LEFT JOIN characters ON characters.userid = users.ID
-            WHERE LOWER(email) = LOWER(%s) OR LOWER(characters.`name`) = LOWER(%s)
-        """, (query,query))
+            WHERE LOWER(email) = LOWER(%s) OR LOWER(characters.`name`) = LOWER(%s) OR LOWER(users.`username`) = LOWER(%s)
+        """, (discord_id,charname,username))
         results = cur.fetchall()
         if len(results) == 0:
             return "User not found!"
         user = results[0]
-        characters = list(map(format_char, results))
+        if results[0][7] == None:
+            characters = []
+        else:
+            characters = list(map(format_char, results))
         
         banned_until = None
         ban_reason = ''
