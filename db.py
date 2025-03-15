@@ -1,29 +1,20 @@
 import mariadb
-import os
 import discord
 import bcrypt
 import utils
 from utils import db_format_dob, job_name, get_ban_reason
-from dotenv import load_dotenv
 from datetime import datetime
 import math
 from table2ascii import table2ascii as t2a, PresetStyle
-
-load_dotenv()
-
-DB_HOST = os.getenv("DB_HOST")
-DB_NAME = os.getenv("DB_NAME")
-DB_USER = os.getenv("DB_USER")
-DB_PASS = os.getenv("DB_PASS")
-REGISTER_GM_LEVEL = os.getenv("REGISTER_GM_LEVEL") or 0
+import variables
 
 def db_connect():
     cnx = mariadb.connect(
-        host=DB_HOST,
+        host=variables.DB_HOST,
         port=3306,
-        user=DB_USER,
-        password=DB_PASS,
-        database=DB_NAME,
+        user=variables.DB_USER,
+        password=variables.DB_PASS,
+        database=variables.DB_NAME,
     )
 
     cur = cnx.cursor()
@@ -48,7 +39,7 @@ def db_register(interaction: discord.Interaction, form):
 
         cur.execute(
             "INSERT INTO users (username, password, email, gender, admin, char_delete_password) VALUES (%s, %s, %s, %s, %s, %s)",
-            (form.username.value, hashed_password, user_id, 10, REGISTER_GM_LEVEL, dob_formatted)
+            (form.username.value, hashed_password, user_id, 10, 0, dob_formatted)
         )
         cnx.commit()
 

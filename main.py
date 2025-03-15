@@ -1,28 +1,10 @@
 import mariadb
 import discord
-from typing import Union
-import os
 from discord import app_commands, ButtonStyle
-from dotenv import load_dotenv
 from ui import RegisterButton, ResetPasswordButton, DownloadButton
 import db
-
-# Load environment variables from .env file
-load_dotenv()
-
-TOKEN = os.getenv("DISCORD_TOKEN")
-SERVER_ID = os.getenv("DISCORD_SERVER_ID")
-CHANNEL_ACCESS_ID = int(os.getenv("DISCORD_CHANNEL_ACCESS_ID"))
-CHANNEL_RANKINGS_ID = int(os.getenv("DISCORD_CHANNEL_RANKINGS_ID"))
-DOWNLOAD_URL = os.getenv("DISCORD_DOWNLOAD_URL")
-GM_ROLE = int(os.getenv("DISCORD_GM_ROLE"))
-GM_INTERN_ROLE = int(os.getenv("DISCORD_GM_INTERN_ROLE"))
-
-# Initialize the bot
-intents = discord.Intents.default()
-client = discord.Client(intents=intents)
-tree = app_commands.CommandTree(client)
-guild = discord.Object(id=SERVER_ID)
+import variables
+from discord_client import guild, tree, client
 
 ephemerals = {}
 
@@ -118,7 +100,7 @@ async def show_rankings(interaction: discord.Interaction, state: db.RankingsStat
         if 'cur' in locals(): cur.close()
         if 'cnx' in locals(): cnx.close()
 
-@app_commands.checks.has_any_role(GM_ROLE, GM_INTERN_ROLE)
+@app_commands.checks.has_any_role(variables.GM_ROLE, variables.GM_INTERN_ROLE)
 @tree.command(name='find', description='Find in-game user.', guild=guild)
 async def find_user(interaction: discord.Interaction, user: discord.User = None, charname: str = None, username: str = None):
     if user == None and charname == None and username == None:
@@ -135,7 +117,7 @@ async def on_ready():
     await tree.sync(guild=guild)
 
     # Send access buttons
-    access_channel = client.get_channel(CHANNEL_ACCESS_ID)
+    access_channel = client.get_channel(variables.CHANNEL_ACCESS_ID)
 
     if access_channel is None:
         raise f"Access channel not found!"
@@ -149,14 +131,14 @@ async def on_ready():
 
     # Add download view
     download_view = discord.ui.View(timeout=None)
-    download_view.add_item(DownloadButton(DOWNLOAD_URL))
+    download_view.add_item(DownloadButton(variables.DOWNLOAD_URL))
 
     await access_channel.purge(limit=10, check=is_me)
     await access_channel.send(view=register_view, silent=True)
     await access_channel.send(view=download_view, silent=True)
 
     # Rankings button
-    rankings_channel = client.get_channel(CHANNEL_RANKINGS_ID)
+    rankings_channel = client.get_channel(variables.CHANNEL_RANKINGS_ID)
     rankings_view = discord.ui.View(timeout=None)
     rankings_view.add_item(RankingsButton())
     await rankings_channel.purge(limit=10, check=is_me)
@@ -164,5 +146,4 @@ async def on_ready():
 
     print("Ready!")
 
-# Start the bot
-client.run(TOKEN)
+client.run(variables.TOKEN)

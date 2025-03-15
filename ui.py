@@ -3,11 +3,8 @@ import discord
 import os
 from db import db_register, db_change_password
 from utils import validate_dob
-from dotenv import load_dotenv
-
-load_dotenv()
-
-ACCESS_REQUIRED_ROLE = os.getenv("ACCESS_REQUIRED_ROLE")
+import variables
+from discord_client import get_logging_channel
 
 class RegisterModal(discord.ui.Modal, title="Register"):
     username = discord.ui.TextInput(label="Username", placeholder="Manji", min_length=4, max_length=12)
@@ -27,6 +24,9 @@ class RegisterModal(discord.ui.Modal, title="Register"):
             message = "Invalid date of birth!"
         else:
             message = db_register(interaction, self)
+            logging_channel = get_logging_channel()
+            if logging_channel != None:
+                await logging_channel.send(f"New account registered with username `{self.username.value}` by <@{interaction.user.id}>.")
 
         # Handle the form submission
         await interaction.response.send_message(
@@ -64,7 +64,7 @@ class RegisterButton(discord.ui.Button):
         super().__init__(label='Register', style=discord.ButtonStyle.primary)
 
     async def callback(self, interaction: discord.Interaction):
-        if ACCESS_REQUIRED_ROLE != None and interaction.guild.get_role(int(ACCESS_REQUIRED_ROLE)) not in interaction.user.roles:
+        if variables.ACCESS_REQUIRED_ROLE != None and interaction.guild.get_role(int(variables.ACCESS_REQUIRED_ROLE)) not in interaction.user.roles:
             await interaction.response.send_message('Missing the required roles to do this!', ephemeral=True)
         else:
             await interaction.response.send_modal(RegisterModal())
@@ -74,7 +74,7 @@ class ResetPasswordButton(discord.ui.Button):
         super().__init__(label='Reset password', style=discord.ButtonStyle.secondary)
 
     async def callback(self, interaction: discord.Interaction):
-        if ACCESS_REQUIRED_ROLE != None and interaction.guild.get_role(int(ACCESS_REQUIRED_ROLE)) not in interaction.user.roles:
+        if variables.ACCESS_REQUIRED_ROLE != None and interaction.guild.get_role(int(variables.ACCESS_REQUIRED_ROLE)) not in interaction.user.roles:
             await interaction.response.send_message('Missing the required roles to do this!', ephemeral=True)
         else:
             await interaction.response.send_modal(ResetPasswordModal())
