@@ -35,18 +35,19 @@ def db_register(interaction: discord.Interaction, form):
             WHERE LOWER(username) = LOWER(%s) OR LOWER(email) = LOWER(%s)
         """, (form.username.value, user_id))
         if cur.fetchone()[0] > 0:
-            return "This user is already registered!"
+            return ("This user is already registered!", 0)
 
         cur.execute(
             "INSERT INTO users (username, password, email, gender, admin, char_delete_password) VALUES (%s, %s, %s, %s, %s, %s)",
             (form.username.value, hashed_password, user_id, 10, 0, dob_formatted)
         )
         cnx.commit()
+        userid = cur.lastrowid
 
-        return f'Welcome {form.username}!'
+        return (f'Welcome {form.username}!', userid)
     except mariadb.Error as e:
         print(f"Database error occurred: {e}")
-        return 'An unknown error occurred, please try again later!'
+        return ('An unknown error occurred, please try again later!', 0)
     finally:
         if 'cur' in locals(): cur.close()
         if 'cnx' in locals(): cnx.close()

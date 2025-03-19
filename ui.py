@@ -23,10 +23,10 @@ class RegisterModal(discord.ui.Modal, title="Register"):
         elif validate_dob(self.dob.value) == False:
             message = "Invalid date of birth!"
         else:
-            message = db_register(interaction, self)
+            (message, userid) = db_register(interaction, self)
             logging_channel = get_logging_channel()
             if logging_channel != None:
-                await logging_channel.send(f"New account registered with username `{self.username.value}` by <@{interaction.user.id}>.")
+                await logging_channel.send(f"New account registered with username `{self.username.value}` (userid {userid}) by <@{interaction.user.id}>.")
 
         # Handle the form submission
         await interaction.response.send_message(
