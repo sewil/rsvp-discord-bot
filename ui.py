@@ -1,10 +1,8 @@
 from typing import Callable
 import discord
-import os
 from db import db_register, db_change_password
 from utils import validate_dob
 import variables
-from discord_client import get_logging_channel
 
 class RegisterModal(discord.ui.Modal, title="Register"):
     username = discord.ui.TextInput(label="Username", placeholder="Manji", min_length=4, max_length=12)
@@ -23,10 +21,7 @@ class RegisterModal(discord.ui.Modal, title="Register"):
         elif validate_dob(self.dob.value) == False:
             message = "Invalid date of birth!"
         else:
-            (message, userid) = db_register(interaction, self)
-            logging_channel = get_logging_channel()
-            if logging_channel != None:
-                await logging_channel.send(f"New account registered with username `{self.username.value}` (userid {userid}) by <@{interaction.user.id}>.")
+            message = await db_register(interaction, self)
 
         # Handle the form submission
         await interaction.response.send_message(
@@ -51,7 +46,7 @@ class ResetPasswordModal(discord.ui.Modal, title="Reset password"):
         elif validate_dob(self.dob.value) == False:
             message = "Invalid date of birth!"
         else:
-            message = db_change_password(interaction, self)
+            message = await db_change_password(interaction, self)
 
         # Handle the form submission
         await interaction.response.send_message(

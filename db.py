@@ -7,6 +7,7 @@ from datetime import datetime
 import math
 from table2ascii import table2ascii as t2a, PresetStyle
 import variables
+from discord_client import log
 
 def db_connect():
     cnx = mariadb.connect(
@@ -21,7 +22,7 @@ def db_connect():
 
     return (cnx, cur)
 
-def db_register(interaction: discord.Interaction, form):
+async def db_register(interaction: discord.Interaction, form):
     try:
         user_id = interaction.user.id
         dob_formatted = db_format_dob(form.dob.value)
@@ -34,8 +35,10 @@ def db_register(interaction: discord.Interaction, form):
             SELECT COUNT(*) FROM users
             WHERE LOWER(username) = LOWER(%s) OR LOWER(email) = LOWER(%s)
         """, (form.username.value, user_id))
+
         if cur.fetchone()[0] > 0:
-            return ("This user is already registered!", 0)
+            await log(f"User <@{interaction.user.id}> tried registering already existing account with username `{form.username.value}`.")
+            return "This user is already registered!"
 
         cur.execute(
             "INSERT INTO users (username, password, email, gender, admin, char_delete_password) VALUES (%s, %s, %s, %s, %s, %s)",
@@ -44,15 +47,16 @@ def db_register(interaction: discord.Interaction, form):
         cnx.commit()
         userid = cur.lastrowid
 
-        return (f'Welcome {form.username}!', userid)
+        await log(f"User <@{interaction.user.id}> registered new account with username `{form.username.value}` (userid {userid}) and DoB `{dob_formatted}`.")
+        return f'Welcome {form.username}!'
     except mariadb.Error as e:
-        print(f"Database error occurred: {e}")
-        return ('An unknown error occurred, please try again later!', 0)
+        await log(f"Database error occurred on registration for user <@{interaction.user.id}>: {e}")
+        return 'An unknown error occurred, please try again later!'
     finally:
         if 'cur' in locals(): cur.close()
         if 'cnx' in locals(): cnx.close()
 
-def db_change_password(interaction: discord.Interaction, form):
+async def db_change_password(interaction: discord.Interaction, form):
     try:
         user_id = interaction.user.id
 
@@ -68,6 +72,7 @@ def db_change_password(interaction: discord.Interaction, form):
         cur.execute(check_query, (form.username.value, user_id, dob_formatted))
         user = cur.fetchone()
         if user == None:
+            await log(f"User <@{interaction.user.id}> failed resetting password for account with username `{form.username.value}` and DoB `{dob_formatted}`.")
             return "User not found! Make sure to use the same Discord account that you registered with and that you have entered a valid date of birth."
 
         hashed_new_password = bcrypt.hashpw(form.new_password.value.encode(), bcrypt.gensalt(13, prefix=b'2a'))
@@ -75,10 +80,12 @@ def db_change_password(interaction: discord.Interaction, form):
         insert_query = "UPDATE users SET password=%s WHERE ID=%s"
         cur.execute(insert_query, (hashed_new_password, user[0]))
         cnx.commit()
+        userid = cur.lastrowid
 
+        await log(f"User <@{interaction.user.id}> reset password for account with username `{form.username.value}` (userid {userid}) and DoB `{dob_formatted}`.")
         return f'Password changed!'
     except mariadb.Error as e:
-        print(f"Database error occurred: {e}")
+        await log(f"Database error occurred on reset password for user <@{interaction.user.id}>: {e}")
         return 'An unknown error occurred, please try again later!'
     finally:
         if 'cur' in locals(): cur.close()
