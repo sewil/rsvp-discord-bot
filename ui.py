@@ -6,7 +6,7 @@ import variables
 
 class RegisterModal(discord.ui.Modal, title="Register"):
     username = discord.ui.TextInput(label="Username", placeholder="Manji", min_length=4, max_length=12)
-    dob = discord.ui.TextInput(label="Date of birth (For char deletion)", placeholder="YYYY-MM-DD")
+    dob = discord.ui.TextInput(label="Date of birth (For char deletion)", placeholder="YYYY-MM-DD", min_length=10, max_length=10)
     password = discord.ui.TextInput(label="Password", placeholder="*****", min_length=4, max_length=12)
     password2 = discord.ui.TextInput(label="Password (again)", placeholder="*****", min_length=4, max_length=12)
 
@@ -31,7 +31,7 @@ class RegisterModal(discord.ui.Modal, title="Register"):
 
 class ResetPasswordModal(discord.ui.Modal, title="Reset password"):
     username = discord.ui.TextInput(label="Username", placeholder="Manji", min_length=4, max_length=12)
-    dob = discord.ui.TextInput(label="Date of birth", placeholder="YYYY-MM-DD")
+    dob = discord.ui.TextInput(label="Date of birth", placeholder="YYYY-MM-DD", min_length=10, max_length=10)
     new_password = discord.ui.TextInput(label="New password", placeholder="*****", min_length=4, max_length=12)
     new_password2 = discord.ui.TextInput(label="New password (again)", placeholder="*****", min_length=4, max_length=12)
 
@@ -77,12 +77,3 @@ class ResetPasswordButton(discord.ui.Button):
 class DownloadButton(discord.ui.Button):
     def __init__(self, url: str):
         super().__init__(label='Download', url=url)
-
-class RankingsPageView(discord.ui.View):
-    rankings_callback: Callable[[str], str]
-    def __init__(self, rankings_callback=None):
-        super().__init__(label='Page', style=discord.TextStyle.short)
-        self.rankings_callback = rankings_callback
-
-    async def callback(self, interaction: discord.Interaction):
-        rankings = self.rankings_callback(self.value)
