@@ -1,7 +1,7 @@
 import mariadb
 import discord
 from discord import app_commands, ButtonStyle
-from ui import RegisterButton, ResetPasswordButton, DownloadButton
+from ui import RegisterButton, ResetPasswordButton, DownloadButton, ReferralButton
 import db
 import variables
 from discord_client import guild, tree, client
@@ -128,6 +128,7 @@ async def on_ready():
     register_view = discord.ui.View(timeout=None)
     register_view.add_item(RegisterButton())
     register_view.add_item(ResetPasswordButton())
+    register_view.add_item(ReferralButton())
 
     # Add download view
     download_view = discord.ui.View(timeout=None)

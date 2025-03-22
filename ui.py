@@ -1,6 +1,6 @@
-from typing import Callable
 import discord
 from db import db_register, db_change_password
+import db
 from utils import validate_dob
 import variables
 
@@ -9,6 +9,7 @@ class RegisterModal(discord.ui.Modal, title="Register"):
     dob = discord.ui.TextInput(label="Date of birth (For char deletion)", placeholder="YYYY-MM-DD", min_length=10, max_length=10)
     password = discord.ui.TextInput(label="Password", placeholder="*****", min_length=4, max_length=12)
     password2 = discord.ui.TextInput(label="Password (again)", placeholder="*****", min_length=4, max_length=12)
+    referral_code = discord.ui.TextInput(label="Referral code", placeholder="ABCD1234", min_length=0, max_length=8, required=False)
 
     def __init__(self):
         super().__init__()
@@ -77,3 +78,12 @@ class ResetPasswordButton(discord.ui.Button):
 class DownloadButton(discord.ui.Button):
     def __init__(self, url: str):
         super().__init__(label='Download', url=url)
+
+class ReferralButton(discord.ui.Button):
+    def __init__(self):
+        super().__init__(label='Get referral code', style=discord.ButtonStyle.secondary)
+
+    async def callback(self, interaction: discord.Interaction):
+        msg = await db.db_get_referral_code(interaction)
+        await interaction.user.send(msg)
+        await interaction.response.defer()

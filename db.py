@@ -1,3 +1,4 @@
+import zlib
 import mariadb
 import discord
 import bcrypt
@@ -24,30 +25,44 @@ def db_connect():
 
 async def db_register(interaction: discord.Interaction, form):
     try:
-        user_id = interaction.user.id
+        discord_id = interaction.user.id
         dob_formatted = db_format_dob(form.dob.value)
         hashed_password = bcrypt.hashpw(form.password.value.encode(), bcrypt.gensalt(13, prefix=b'2a'))
 
         (cnx, cur) = db_connect()
 
+        # Check referral code
+        referral_code = form.referral_code.value
+        referred_by = None
+        if referral_code != None and len(referral_code) > 0:
+            if utils.validate_referral_code(referral_code) == False:
+                await log(f"User <@{interaction.user.id}> failed registration with invalid referral code `{referral_code}`. (Username `{form.username.value}`, DoB `{dob_formatted}`).")
+                return "Invalid referral code!"
+            cur.execute("SELECT ID FROM users WHERE LOWER(referral_code) = LOWER(%s)", (referral_code,))
+            result = cur.fetchone()
+            if result == None or result[0] == None:
+                await log(f"User <@{interaction.user.id}> failed registration with invalid referral code `{referral_code}`. (Username `{form.username.value}`, DoB `{dob_formatted}`).")
+                return "Invalid referral code!"
+            referred_by = result[0]
+
         # Check username/discord_id already exists
-        cur.execute(f"""
+        cur.execute("""
             SELECT COUNT(*) FROM users
             WHERE LOWER(username) = LOWER(%s) OR LOWER(email) = LOWER(%s)
-        """, (form.username.value, user_id))
+        """, (form.username.value, discord_id))
 
         if cur.fetchone()[0] > 0:
-            await log(f"User <@{interaction.user.id}> tried registering already existing account with username `{form.username.value}`.")
+            await log(f"User <@{interaction.user.id}> tried registering already existing account with username `{form.username.value}` and DoB `{dob_formatted}`.")
             return "This user is already registered!"
 
         cur.execute(
-            "INSERT INTO users (username, password, email, gender, admin, char_delete_password) VALUES (%s, %s, %s, %s, %s, %s)",
-            (form.username.value, hashed_password, user_id, 10, 0, dob_formatted)
+            "INSERT INTO users (username, password, email, gender, admin, char_delete_password, referred_by) VALUES (%s, %s, %s, %s, %s, %s, %s)",
+            (form.username.value, hashed_password, discord_id, 10, 0, dob_formatted, referred_by)
         )
         cnx.commit()
         userid = cur.lastrowid
 
-        await log(f"User <@{interaction.user.id}> registered new account with username `{form.username.value}` (userid {userid}) and DoB `{dob_formatted}`.")
+        await log(f"User <@{interaction.user.id}> registered new account with username `{form.username.value}` (userid {userid}) and DoB `{dob_formatted}`{f' using referral code `{referral_code}`' if bool(referral_code) else ''}.")
         return f'Welcome {form.username}!'
     except mariadb.Error as e:
         await log(f"Database error occurred on registration for user <@{interaction.user.id}>: {e}")
@@ -338,6 +353,33 @@ def db_find_user(discord_id: str = None, charname: str = None, username: str = N
         return message
     except mariadb.Error as e:
         print(f"Database error occurred: {e}")
+        return 'An unknown error occurred, please try again later!'
+    finally:
+        if 'cur' in locals(): cur.close()
+        if 'cnx' in locals(): cnx.close()
+
+async def db_get_referral_code(interaction: discord.Interaction):
+    try:
+        (cnx, cur) = db_connect()
+        cur.execute("""
+            SELECT ID, referral_code
+            FROM users
+            WHERE LOWER(email) = LOWER(%s)
+        """, (interaction.user.id,))
+        result = cur.fetchone()
+        if result == None:
+            return "Couldn't find an account for this user! Please register an account first."
+        referral_code = result[1]
+        if referral_code == None:
+            # Null referral code, make one
+            user_id = result[0]
+            user_id_crc32 = zlib.crc32(str(user_id).encode() + bcrypt.gensalt())
+            referral_code = hex(user_id_crc32)[2:].upper()
+            cur.execute("UPDATE `users` SET `referral_code`=%s WHERE `ID`=%s", (referral_code, user_id))
+            cnx.commit()
+        return f"Here is your referral code! Send this code to any players registering a new account on MG2. When the player reaches **level 30** for the first time, you and the player you referred will both earn **2,000 Cash**!\n```{referral_code}```"
+    except mariadb.Error as e:
+        await log(f"Database error occurred on get referral code for user <@{interaction.user.id}>: {e}")
         return 'An unknown error occurred, please try again later!'
     finally:
         if 'cur' in locals(): cur.close()

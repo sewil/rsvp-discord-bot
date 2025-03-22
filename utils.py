@@ -35,6 +35,9 @@ def validate_dob(dob: str):
 def db_format_dob(dob: str):
     return int(dob.replace("-", ""))
 
+def validate_referral_code(code: str):
+    return re.match(r"[A-Fa-f\d]{8}", code) != None
+
 def get_ban_reason(reason: int):
     if reason == 1: return 'hacking'
     elif reason == 2: return 'botting'
