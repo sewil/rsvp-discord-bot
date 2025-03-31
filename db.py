@@ -95,7 +95,7 @@ async def db_change_password(interaction: discord.Interaction, form):
         insert_query = "UPDATE users SET password=%s WHERE ID=%s"
         cur.execute(insert_query, (hashed_new_password, user[0]))
         cnx.commit()
-        userid = cur.lastrowid
+        userid = user[0]
 
         await log(f"User <@{interaction.user.id}> reset password for account with username `{form.username.value}` (userid {userid}) and DoB `{dob_formatted}`.")
         return f'Password changed!'
