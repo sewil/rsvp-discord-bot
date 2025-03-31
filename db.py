@@ -4,7 +4,7 @@ import discord
 import bcrypt
 import utils
 from utils import db_format_dob, job_name, get_ban_reason
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 import math
 from table2ascii import table2ascii as t2a, PresetStyle
 import variables
@@ -381,6 +381,27 @@ async def db_get_referral_code(interaction: discord.Interaction):
     except mariadb.Error as e:
         await log(f"Database error occurred on get referral code for user <@{interaction.user.id}>: {e}")
         return 'An unknown error occurred, please try again later!'
+    finally:
+        if 'cur' in locals(): cur.close()
+        if 'cnx' in locals(): cnx.close()
+
+async def db_get_voting_link(interaction: discord.Interaction):
+    try:
+        (cnx, cur) = db_connect()
+        cur.execute("SELECT username FROM users WHERE LOWER(email) = LOWER(%s)", (interaction.user.id,))
+        result = cur.fetchone()
+        if result == None:
+            return ("Couldn't find an account for this user! Please register an account first.", False)
+        username = result[0]
+        timestamp = int((datetime.now(timezone.utc) + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0).timestamp())
+        return ((
+            "Here is your voting link!\n"
+            f"https://gtop100.com/MapleStory/OpenMG-MG2-104637?vote=1&pingUsername={username}\n\n"
+            f"You can vote once a day, resetting at <t:{timestamp}:t>, and you will earn **1,000 Cash** per vote. After voting, it may take up to 5 minutes to see the updated amounts in Cash Shop, so please be patient!"
+        ), True)
+    except mariadb.Error as e:
+        await log(f"Database error occurred on get voting link for user <@{interaction.user.id}>: {e}")
+        return ('An unknown error occurred, please try again later!', False)
     finally:
         if 'cur' in locals(): cur.close()
         if 'cnx' in locals(): cnx.close()

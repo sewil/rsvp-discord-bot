@@ -87,3 +87,15 @@ class ReferralButton(discord.ui.Button):
         msg = await db.db_get_referral_code(interaction)
         await interaction.user.send(msg)
         await interaction.response.defer()
+
+class VoteButton(discord.ui.Button):
+    def __init__(self):
+        super().__init__(label='Vote on Gtop100', style=discord.ButtonStyle.secondary)
+
+    async def callback(self, interaction: discord.Interaction):
+        (msg, success) = await db.db_get_voting_link(interaction)
+        if success:
+            await interaction.user.send(msg)
+            await interaction.response.defer()
+        else:
+            await interaction.response.send_message(msg, ephemeral=True)
