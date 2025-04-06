@@ -374,7 +374,7 @@ async def db_get_referral_code(interaction: discord.Interaction):
             # Null referral code, make one
             user_id = result[0]
             user_id_crc32 = zlib.crc32(str(user_id).encode() + bcrypt.gensalt())
-            referral_code = hex(user_id_crc32)[2:].upper()
+            referral_code = hex(user_id_crc32)[2:].upper().rjust(8, '0')
             cur.execute("UPDATE `users` SET `referral_code`=%s WHERE `ID`=%s", (referral_code, user_id))
             cnx.commit()
         return f"Here is your referral code! Send this code to any players registering a new account on MG2. When the player reaches **level 30** for the first time, you and the player you referred will both earn **2,000 Cash**!\n```{referral_code}```"
