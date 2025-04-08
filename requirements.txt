@@ -3,3 +3,4 @@ python-dotenv
 bcrypt
 mariadb
 table2ascii
+redis

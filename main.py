@@ -5,6 +5,9 @@ from ui import RegisterButton, ResetPasswordButton, DownloadButton, ReferralButt
 import db
 import variables
 from discord_client import guild, tree, client
+import redis_backend
+import socket
+import asyncio
 
 ephemerals = {}
 
@@ -112,6 +115,51 @@ async def find_user(interaction: discord.Interaction, user: discord.User = None,
 def is_me(member):
     return member.author == client.user
 
+class DummyProtocol(asyncio.Protocol):
+    def connection_made(self, transport):
+        transport.close()
+
+    def connection_lost(self, exc):
+        pass
+async def ping_server():
+    try:
+        loop = asyncio.get_running_loop()
+        host = variables.SERVER_HOST
+        port = variables.SERVER_PORT
+        transport, protocol = await loop.create_connection(
+            DummyProtocol,
+            host,
+            port
+        )
+        transport.close()
+        return True
+    except (ConnectionRefusedError, TimeoutError, OSError) as e:
+        # print(f"Error connecting to {host}:{port}: {e}")
+        return False
+    except Exception as e:
+        print(f"An unexpected error occurred while connecting to {host}:{port}: {e}")
+        return False
+
+_status_msg: discord.Message = None
+async def update_server_info(channel: discord.TextChannel):
+    global _status_msg
+    r = redis_backend.connect()
+    online_game0 = int(redis_backend.get_online_count(r, 0, 0) or 0)
+    online_shop0 = int(redis_backend.get_online_count(r, 0, 50) or 0)
+    online_login = int(redis_backend.get_online_count(r, -1, 0) or 0)
+    online_count = online_game0 + online_shop0 + online_login
+    server_is_online = await ping_server()
+    print(f'Update server info... Online? {server_is_online}, Game0 {online_game0}, Shop0 {online_shop0}, Login0 {online_login}')
+    color = discord.Color.green() if server_is_online else discord.Color.red()
+    embed = discord.Embed(color=color, title='Server info')
+    embed.add_field(name='Status', value='ONLINE' if server_is_online else 'OFFLINE')
+    embed.add_field(name='Player count', value=online_count)
+
+    if _status_msg == None:
+        _status_msg = await channel.send(silent=True, embed=embed)
+    else:
+        await _status_msg.edit(embed=embed)
+
 @client.event
 async def on_ready():
     await tree.sync(guild=guild)
@@ -136,6 +184,7 @@ async def on_ready():
     download_view.add_item(VoteButton())
 
     await access_channel.purge(limit=10, check=is_me)
+    await update_server_info(access_channel)
     await access_channel.send(view=register_view, silent=True)
     await access_channel.send(view=download_view, silent=True)
 
@@ -147,5 +196,9 @@ async def on_ready():
     await rankings_channel.send(view=rankings_view, silent=True)
 
     print("Ready!")
+
+    while True:
+        await asyncio.sleep(60)
+        await update_server_info(access_channel)
 
 client.run(variables.TOKEN)
