@@ -144,8 +144,9 @@ _status_msg: discord.Message = None
 async def update_server_info(channel: discord.TextChannel):
     global _status_msg
     r = redis_backend.connect()
-    online_game0 = int(redis_backend.get_online_count(r, 0, 0) or 0)
-    online_shop0 = int(redis_backend.get_online_count(r, 0, 50) or 0)
+    world = variables.SERVER_WORLD
+    online_game0 = int(redis_backend.get_online_count(r, world, 0) or 0)
+    online_shop0 = int(redis_backend.get_online_count(r, world, 50) or 0)
     online_login = int(redis_backend.get_online_count(r, -1, 0) or 0)
     online_count = online_game0 + online_shop0 + online_login
     server_is_online = await ping_server()
