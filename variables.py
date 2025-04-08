@@ -23,4 +23,7 @@ REDIS_PASS = os.getenv("REDIS_PASS")
 
 SERVER_HOST = os.getenv("SERVER_HOST")
 SERVER_PORT = os.getenv("SERVER_PORT")
-SERVER_WORLD = os.getenv("SERVER_WORLD")
+SERVER_WORLD = int(os.getenv("SERVER_WORLD") or 0)
+SERVER_LOGIN = int(os.getenv("SERVER_LOGIN") or 0)
+SERVER_GAME = int(os.getenv("SERVER_GAME") or 0)
+SERVER_SHOP = int(os.getenv("SERVER_SHOP") or 50)
