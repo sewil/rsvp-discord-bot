@@ -2,7 +2,7 @@ import discord
 from db import db_register, db_change_password
 import db
 from utils import validate_dob
-import variables
+from discord_client import send_error_message
 
 class RegisterModal(discord.ui.Modal, title="Register"):
     username = discord.ui.TextInput(label="Username", placeholder="Manji", min_length=4, max_length=12)
@@ -60,20 +60,14 @@ class RegisterButton(discord.ui.Button):
         super().__init__(label='Register', style=discord.ButtonStyle.primary)
 
     async def callback(self, interaction: discord.Interaction):
-        if variables.ACCESS_REQUIRED_ROLE != None and interaction.guild.get_role(int(variables.ACCESS_REQUIRED_ROLE)) not in interaction.user.roles:
-            await interaction.response.send_message('Missing the required roles to do this!', ephemeral=True)
-        else:
-            await interaction.response.send_modal(RegisterModal())
+        await interaction.response.send_modal(RegisterModal())
 
 class ResetPasswordButton(discord.ui.Button):
     def __init__(self):
         super().__init__(label='Reset password', style=discord.ButtonStyle.secondary)
 
     async def callback(self, interaction: discord.Interaction):
-        if variables.ACCESS_REQUIRED_ROLE != None and interaction.guild.get_role(int(variables.ACCESS_REQUIRED_ROLE)) not in interaction.user.roles:
-            await interaction.response.send_message('Missing the required roles to do this!', ephemeral=True)
-        else:
-            await interaction.response.send_modal(ResetPasswordModal())
+        await interaction.response.send_modal(ResetPasswordModal())
 
 class DownloadButton(discord.ui.Button):
     def __init__(self, url: str):
