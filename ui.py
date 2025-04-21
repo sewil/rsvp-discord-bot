@@ -16,19 +16,16 @@ class RegisterModal(discord.ui.Modal, title="Register"):
         self.title = f"Register"
 
     async def on_submit(self, interaction: discord.Interaction):
-        message = f'Something went wrong!'
         if self.password.value != self.password2.value:
-            message = "Mismatching passwords!"
+            await send_error_message("Mismatching passwords!", interaction)
         elif validate_dob(self.dob.value) == False:
-            message = "Invalid date of birth!"
+            await send_error_message("Invalid date of birth!", interaction)
         else:
             message = await db_register(interaction, self)
-
-        # Handle the form submission
-        await interaction.response.send_message(
-            message,
-            ephemeral=True
-        )
+            await interaction.response.send_message(
+                message,
+                ephemeral=True
+            )
 
 class ResetPasswordModal(discord.ui.Modal, title="Reset password"):
     username = discord.ui.TextInput(label="Username", placeholder="Manji", min_length=4, max_length=12)
@@ -41,19 +38,16 @@ class ResetPasswordModal(discord.ui.Modal, title="Reset password"):
         self.title = f"Reset password"
 
     async def on_submit(self, interaction: discord.Interaction):
-        message = f'Something went wrong!'
         if self.new_password.value != self.new_password2.value:
-            message = "Mismatching passwords!"
+            await send_error_message("Mismatching passwords!", interaction)
         elif validate_dob(self.dob.value) == False:
-            message = "Invalid date of birth!"
+            await send_error_message("Invalid date of birth!", interaction)
         else:
             message = await db_change_password(interaction, self)
-
-        # Handle the form submission
-        await interaction.response.send_message(
-            message,
-            ephemeral=True
-        )
+            await interaction.response.send_message(
+                message,
+                ephemeral=True
+            )
 
 class RegisterButton(discord.ui.Button):
     def __init__(self):

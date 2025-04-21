@@ -12,3 +12,6 @@ async def log(content: str):
     logging_channel = client.get_channel(variables.CHANNEL_LOGGING_ID)
     if logging_channel != None:
         await logging_channel.send(content)
+
+def send_error_message(content: str, interaction: discord.Interaction):
+    return interaction.response.send_message(content=content, ephemeral=True, delete_after=10)
