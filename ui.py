@@ -2,7 +2,7 @@ import discord
 from db import db_register, db_change_password
 import db
 from utils import validate_dob
-from discord_client import send_error_message
+from discord_client import send_tmp_message
 
 class RegisterModal(discord.ui.Modal, title="Register"):
     username = discord.ui.TextInput(label="Username", placeholder="Manji", min_length=4, max_length=12)
@@ -17,15 +17,11 @@ class RegisterModal(discord.ui.Modal, title="Register"):
 
     async def on_submit(self, interaction: discord.Interaction):
         if self.password.value != self.password2.value:
-            await send_error_message("Mismatching passwords!", interaction)
+            await send_tmp_message("Mismatching passwords!", interaction)
         elif validate_dob(self.dob.value) == False:
-            await send_error_message("Invalid date of birth!", interaction)
+            await send_tmp_message("Invalid date of birth!", interaction)
         else:
-            message = await db_register(interaction, self)
-            await interaction.response.send_message(
-                message,
-                ephemeral=True
-            )
+            await db_register(interaction, self)
 
 class ResetPasswordModal(discord.ui.Modal, title="Reset password"):
     username = discord.ui.TextInput(label="Username", placeholder="Manji", min_length=4, max_length=12)
@@ -39,15 +35,11 @@ class ResetPasswordModal(discord.ui.Modal, title="Reset password"):
 
     async def on_submit(self, interaction: discord.Interaction):
         if self.new_password.value != self.new_password2.value:
-            await send_error_message("Mismatching passwords!", interaction)
+            await send_tmp_message("Mismatching passwords!", interaction)
         elif validate_dob(self.dob.value) == False:
-            await send_error_message("Invalid date of birth!", interaction)
+            await send_tmp_message("Invalid date of birth!", interaction)
         else:
-            message = await db_change_password(interaction, self)
-            await interaction.response.send_message(
-                message,
-                ephemeral=True
-            )
+            await db_change_password(interaction, self)
 
 class RegisterButton(discord.ui.Button):
     def __init__(self):

@@ -8,7 +8,7 @@ from datetime import datetime, timedelta, timezone
 import math
 from table2ascii import table2ascii as t2a, PresetStyle
 import variables
-from discord_client import log
+from discord_client import log, send_tmp_message
 
 def db_connect():
     cnx = mariadb.connect(
@@ -37,12 +37,14 @@ async def db_register(interaction: discord.Interaction, form):
         if referral_code != None and len(referral_code) > 0:
             if utils.validate_referral_code(referral_code) == False:
                 await log(f"User <@{interaction.user.id}> failed registration with invalid referral code `{referral_code}`. (Username `{form.username.value}`, DoB `{dob_formatted}`).")
-                return "Invalid referral code!"
+                await send_tmp_message("Invalid referral code!", interaction)
+                return
             cur.execute("SELECT ID FROM users WHERE LOWER(referral_code) = LOWER(%s)", (referral_code,))
             result = cur.fetchone()
             if result == None or result[0] == None:
                 await log(f"User <@{interaction.user.id}> failed registration with invalid referral code `{referral_code}`. (Username `{form.username.value}`, DoB `{dob_formatted}`).")
-                return "Invalid referral code!"
+                await send_tmp_message("Invalid referral code!", interaction)
+                return
             referred_by = result[0]
 
         # Check username/discord_id already exists
@@ -53,7 +55,8 @@ async def db_register(interaction: discord.Interaction, form):
 
         if cur.fetchone()[0] > 0:
             await log(f"User <@{interaction.user.id}> tried registering already existing account with username `{form.username.value}` and DoB `{dob_formatted}`.")
-            return "This user is already registered!"
+            await send_tmp_message("This user is already registered!", interaction)
+            return
 
         cur.execute(
             "INSERT INTO users (username, password, email, gender, admin, char_delete_password, referred_by) VALUES (%s, %s, %s, %s, %s, %s, %s)",
@@ -63,10 +66,10 @@ async def db_register(interaction: discord.Interaction, form):
         userid = cur.lastrowid
 
         await log(f"User <@{interaction.user.id}> registered new account with username `{form.username.value}` (userid {userid}) and DoB `{dob_formatted}`{f' using referral code `{referral_code}`' if bool(referral_code) else ''}.")
-        return f'Welcome {form.username}!'
+        await send_tmp_message(f'Welcome {form.username}!', interaction)
     except mariadb.Error as e:
         await log(f"Database error occurred on registration for user <@{interaction.user.id}>: {e}")
-        return 'An unknown error occurred, please try again later!'
+        await send_tmp_message('An unknown error occurred, please try again later!', interaction)
     finally:
         if 'cur' in locals(): cur.close()
         if 'cnx' in locals(): cnx.close()
@@ -88,7 +91,8 @@ async def db_change_password(interaction: discord.Interaction, form):
         user = cur.fetchone()
         if user == None:
             await log(f"User <@{interaction.user.id}> failed resetting password for account with username `{form.username.value}` and DoB `{dob_formatted}`.")
-            return "User not found! Make sure to use the same Discord account that you registered with and that you have entered a valid date of birth."
+            await send_tmp_message("User not found! Make sure to use the same Discord account that you registered with and that you have entered a valid date of birth.", interaction)
+            return
 
         hashed_new_password = bcrypt.hashpw(form.new_password.value.encode(), bcrypt.gensalt(13, prefix=b'2a'))
 
@@ -98,10 +102,10 @@ async def db_change_password(interaction: discord.Interaction, form):
         userid = user[0]
 
         await log(f"User <@{interaction.user.id}> reset password for account with username `{form.username.value}` (userid {userid}) and DoB `{dob_formatted}`.")
-        return f'Password changed!'
+        await send_tmp_message(f'Password changed!', interaction)
     except mariadb.Error as e:
         await log(f"Database error occurred on reset password for user <@{interaction.user.id}>: {e}")
-        return 'An unknown error occurred, please try again later!'
+        await send_tmp_message('An unknown error occurred, please try again later!', interaction)
     finally:
         if 'cur' in locals(): cur.close()
         if 'cnx' in locals(): cnx.close()
@@ -313,7 +317,7 @@ def format_char(row):
         text = f"~~{text}~~"
     return text
 
-def db_find_user(discord_id: str = None, charname: str = None, username: str = None):
+async def db_find_user(interaction: discord.Interaction, discord_id: str = None, charname: str = None, username: str = None):
     try:
         (cnx, cur) = db_connect()
         cur.execute(f"""
@@ -326,7 +330,8 @@ def db_find_user(discord_id: str = None, charname: str = None, username: str = N
         """, (discord_id,charname,username))
         results = cur.fetchall()
         if len(results) == 0:
-            return "User not found!"
+            await send_tmp_message("User not found!", interaction)
+            return
         user = results[0]
         if results[0][7] == None:
             characters = []
@@ -350,10 +355,10 @@ def db_find_user(discord_id: str = None, charname: str = None, username: str = N
         else:
             for c in characters:
                 message += f'- {c}\n'
-        return message
+        await interaction.response.send_message(content=message, ephemeral=True)
     except mariadb.Error as e:
         print(f"Database error occurred: {e}")
-        return 'An unknown error occurred, please try again later!'
+        await send_tmp_message('An unknown error occurred, please try again later!', interaction)
     finally:
         if 'cur' in locals(): cur.close()
         if 'cnx' in locals(): cnx.close()

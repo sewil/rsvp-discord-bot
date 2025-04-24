@@ -109,8 +109,7 @@ async def find_user(interaction: discord.Interaction, user: discord.User = None,
     if user == None and charname == None and username == None:
         await interaction.response.send_message('Must provide either discord user, charname or username!', ephemeral=True)
         return
-    message = db.db_find_user(str(user.id) if user != None else None, charname, username)
-    await interaction.response.send_message(message, ephemeral=True)
+    await db.db_find_user(interaction, str(user.id) if user != None else None, charname, username)
 
 def is_me(member):
     return member.author == client.user
