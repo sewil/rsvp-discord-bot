@@ -142,24 +142,27 @@ async def ping_server():
 
 _status_msg: discord.Message = None
 async def update_server_info(channel: discord.TextChannel):
-    global _status_msg
-    r = redis_backend.connect()
-    world = variables.SERVER_WORLD
-    online_game0 = int(redis_backend.get_online_count(r, world, variables.SERVER_GAME) or 0)
-    online_shop0 = int(redis_backend.get_online_count(r, world, variables.SERVER_SHOP) or 0)
-    online_login = int(redis_backend.get_online_count(r, -1, variables.SERVER_LOGIN) or 0)
-    online_count = online_game0 + online_shop0 + online_login
-    server_is_online = await ping_server()
-    print(f'Update server info... Online? {server_is_online}, Game0 {online_game0}, Shop0 {online_shop0}, Login0 {online_login}')
-    color = discord.Color.green() if server_is_online else discord.Color.red()
-    embed = discord.Embed(color=color, title='Server info')
-    embed.add_field(name='Status', value='ONLINE' if server_is_online else 'OFFLINE')
-    embed.add_field(name='Player count', value=online_count)
+    try:
+        global _status_msg
+        r = redis_backend.connect()
+        world = variables.SERVER_WORLD
+        online_game0 = int(redis_backend.get_online_count(r, world, variables.SERVER_GAME) or 0)
+        online_shop0 = int(redis_backend.get_online_count(r, world, variables.SERVER_SHOP) or 0)
+        online_login = int(redis_backend.get_online_count(r, -1, variables.SERVER_LOGIN) or 0)
+        online_count = online_game0 + online_shop0 + online_login
+        server_is_online = await ping_server()
+        print(f'Update server info... Online? {server_is_online}, Game0 {online_game0}, Shop0 {online_shop0}, Login0 {online_login}')
+        color = discord.Color.green() if server_is_online else discord.Color.red()
+        embed = discord.Embed(color=color, title='Server info')
+        embed.add_field(name='Status', value='ONLINE' if server_is_online else 'OFFLINE')
+        embed.add_field(name='Player count', value=online_count)
 
-    if _status_msg == None:
-        _status_msg = await channel.send(silent=True, embed=embed)
-    else:
-        await _status_msg.edit(embed=embed)
+        if _status_msg == None:
+            _status_msg = await channel.send(silent=True, embed=embed)
+        else:
+            await _status_msg.edit(embed=embed)
+    except Exception as e:
+        print(f"An unexpected error occurred while updating server info: {e}")
 
 @client.event
 async def on_ready():
