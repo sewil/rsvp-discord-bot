@@ -25,7 +25,7 @@ class RankingsButton(discord.ui.Button):
         super().__init__(label='Show server rankings', style=ButtonStyle.primary)
 
     async def callback(self, interaction: discord.Interaction):
-        await show_rankings(interaction, db.RankingsState(1, None), True)
+        await show_rankings(interaction, db.RankingsState(1, None))
 
 class JobFilterButton(discord.ui.Button):
     state: db.RankingsState
@@ -34,9 +34,9 @@ class JobFilterButton(discord.ui.Button):
         self.state = state
 
     async def callback(self, interaction: discord.Interaction):
-        await show_rankings(interaction, self.state, False)
+        await show_rankings(interaction, self.state)
 
-async def show_rankings(interaction: discord.Interaction, state: db.RankingsState, initial: bool = False):
+async def show_rankings(interaction: discord.Interaction, state: db.RankingsState):
     page = state.page
     job = state.job
     page_size = state.page_size
@@ -71,31 +71,13 @@ async def show_rankings(interaction: discord.Interaction, state: db.RankingsStat
         if pages > page:
             rankings_view.add_item(PageButton(db.RankingsState(pages, job)))
 
-        filter_view = discord.ui.View(timeout=None)
-        filter_view.add_item(JobFilterButton(db.RankingsState(page, None), 'All', ButtonStyle.primary if job is None else ButtonStyle.secondary))
-        filter_view.add_item(JobFilterButton(db.RankingsState(page, 1), 'Warrior', ButtonStyle.primary if job == 1 else ButtonStyle.secondary))
-        filter_view.add_item(JobFilterButton(db.RankingsState(page, 2), 'Magician', ButtonStyle.primary if job == 2 else ButtonStyle.secondary))
-        filter_view.add_item(JobFilterButton(db.RankingsState(page, 3), 'Bowman', ButtonStyle.primary if job == 3 else ButtonStyle.secondary))
-        filter_view.add_item(JobFilterButton(db.RankingsState(page, 4), 'Thief', ButtonStyle.primary if job == 4 else ButtonStyle.secondary))
-        filter_view.add_item(JobFilterButton(db.RankingsState(page, 0), 'Beginner', ButtonStyle.primary if job == 0 else ButtonStyle.secondary))
-        filter_view.add_item(JobFilterButton(db.RankingsState(page, 1000), 'Monsterbook', ButtonStyle.primary if job == 1000 else ButtonStyle.secondary))
-        filter_view.add_item(JobFilterButton(db.RankingsState(page, 2000), 'Fame', ButtonStyle.primary if job == 2000 else ButtonStyle.secondary))
-        filter_view.add_item(JobFilterButton(db.RankingsState(page, 3000), 'Quests', ButtonStyle.primary if job == 3000 else ButtonStyle.secondary))
-        filter_view.add_item(JobFilterButton(db.RankingsState(page, 4000), 'Omok', ButtonStyle.primary if job == 4000 else ButtonStyle.secondary))
-        filter_view.add_item(JobFilterButton(db.RankingsState(page, 5000), 'Matchcard', ButtonStyle.primary if job == 5000 else ButtonStyle.secondary))
-
-        if initial:
-            await interaction.response.send_message(view=filter_view, ephemeral=True)
-            msg: discord.Message = await interaction.followup.send(content=content,view=rankings_view, ephemeral=True)
-            ephemerals[interaction.user.id] = msg.id
+        if interaction.user.id in ephemerals:
+            msg: discord.Message = ephemerals[interaction.user.id]
+            await msg.edit(content=content,view=rankings_view)
+            await interaction.response.defer()
         else:
-            await interaction.response.edit_message(view=filter_view)
-            if interaction.user.id in ephemerals:
-                msg_id = ephemerals[interaction.user.id]
-                await interaction.followup.edit_message(message_id=msg_id,content=content,view=rankings_view)
-            else:
-                msg: discord.Message = await interaction.followup.send(content=content,view=rankings_view, ephemeral=True)
-                ephemerals[interaction.user.id] = msg.id
+            msg = await interaction.response.send_message(content=content,view=rankings_view, ephemeral=True)
+            ephemerals[interaction.user.id] = msg.resource
     except mariadb.Error as e:
         print(f"Database error occurred: {e}")
         await interaction.response.send_message(content='An unknown error occurred, please try again later!', ephemeral=True)
@@ -191,12 +173,22 @@ async def on_ready():
     await access_channel.send(view=register_view, silent=True)
     await access_channel.send(view=download_view, silent=True)
 
-    # Rankings button
+    # Rankings filters
     rankings_channel = client.get_channel(variables.CHANNEL_RANKINGS_ID)
     rankings_view = discord.ui.View(timeout=None)
-    rankings_view.add_item(RankingsButton())
+    rankings_view.add_item(JobFilterButton(db.RankingsState(1, None), 'All', ButtonStyle.primary))
+    rankings_view.add_item(JobFilterButton(db.RankingsState(1, 1), 'Warrior', ButtonStyle.primary))
+    rankings_view.add_item(JobFilterButton(db.RankingsState(1, 2), 'Magician', ButtonStyle.primary))
+    rankings_view.add_item(JobFilterButton(db.RankingsState(1, 3), 'Bowman', ButtonStyle.primary))
+    rankings_view.add_item(JobFilterButton(db.RankingsState(1, 4), 'Thief', ButtonStyle.primary))
+    rankings_view.add_item(JobFilterButton(db.RankingsState(1, 0), 'Beginner', ButtonStyle.primary))
+    rankings_view.add_item(JobFilterButton(db.RankingsState(1, 1000), 'Monsterbook', ButtonStyle.primary))
+    rankings_view.add_item(JobFilterButton(db.RankingsState(1, 2000), 'Fame', ButtonStyle.primary))
+    rankings_view.add_item(JobFilterButton(db.RankingsState(1, 3000), 'Quests', ButtonStyle.primary ))
+    rankings_view.add_item(JobFilterButton(db.RankingsState(1, 4000), 'Omok', ButtonStyle.primary))
+    rankings_view.add_item(JobFilterButton(db.RankingsState(1, 5000), 'Matchcard', ButtonStyle.primary))
     await rankings_channel.purge(limit=10, check=is_me)
-    await rankings_channel.send(view=rankings_view, silent=True)
+    await rankings_channel.send(view=rankings_view, content='# Rankings', silent=True)
 
     print("Ready!")
 
