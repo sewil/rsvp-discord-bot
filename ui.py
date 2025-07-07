@@ -1,7 +1,7 @@
 import discord
 from db import db_register, db_change_password
 import db
-from utils import validate_dob
+from utils import validate_dob, validate_email
 from discord_client import send_tmp_message
 
 class RegisterModal(discord.ui.Modal, title="Register"):
@@ -79,3 +79,30 @@ class VoteButton(discord.ui.Button):
             await interaction.response.defer()
         else:
             await interaction.response.send_message(msg, ephemeral=True)
+
+
+class MigrateAccountModal(discord.ui.Modal, title="Migrate account"):
+    dob = discord.ui.TextInput(label="Date of birth", placeholder="YYYY-MM-DD", min_length=10, max_length=10)
+    email = discord.ui.TextInput(label="E-mail", placeholder="manji@maplestory.com", min_length=4)
+    email2 = discord.ui.TextInput(label="Confirm e-mail", placeholder="manji@maplestory.com", min_length=4)
+
+    def __init__(self):
+        super().__init__()
+
+    async def on_submit(self, interaction: discord.Interaction):
+        if (self.email.value != self.email2.value):
+            await send_tmp_message("E-mails don't match!", interaction)
+        elif validate_dob(self.dob.value) == False:
+            await send_tmp_message("Invalid date of birth! Make sure it follows the format `YYYY-MM-DD`", interaction)
+        elif validate_email(self.email.value) == False:
+            await send_tmp_message("Invalid email! Please ensure it follows the format `manji@maplestory.com`", interaction)
+        else:
+            await db.db_migrate_account(interaction, self.email.value, self.dob.value)
+
+class MigrateAccountButton(discord.ui.Button):
+    def __init__(self):
+        super().__init__(label='Migrate account', style=discord.ButtonStyle.primary)
+    
+    async def callback(self, interaction: discord.Interaction):
+        await interaction.response.send_modal(MigrateAccountModal())
+

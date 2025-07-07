@@ -26,3 +26,5 @@ SERVER_WORLD = int(os.getenv("SERVER_WORLD") or 0)
 SERVER_LOGIN = int(os.getenv("SERVER_LOGIN") or 0)
 SERVER_GAME = int(os.getenv("SERVER_GAME") or 0)
 SERVER_SHOP = int(os.getenv("SERVER_SHOP") or 50)
+
+WEB_HOST_BACKEND = os.getenv("WEB_HOST_BACKEND")

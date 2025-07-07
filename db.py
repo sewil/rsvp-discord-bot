@@ -1,3 +1,5 @@
+import requests
+import json
 import zlib
 import mariadb
 import discord
@@ -404,6 +406,45 @@ async def db_get_voting_link(interaction: discord.Interaction):
             f"https://gtop100.com/MapleStory/OpenMG-MG2-104637?vote=1&pingUsername={username}\n\n"
             f"You can vote once a day, resetting at <t:{timestamp}:t>, and you will earn **1,000 Cash** per vote. After voting, it may take up to 5 minutes to see the updated amounts in Cash Shop, so please be patient!"
         ), True)
+    except mariadb.Error as e:
+        await log(f"Database error occurred on get voting link for user <@{interaction.user.id}>: {e}")
+        return ('An unknown error occurred, please try again later!', False)
+    finally:
+        if 'cur' in locals(): cur.close()
+        if 'cnx' in locals(): cnx.close()
+
+async def db_migrate_account(interaction: discord.Interaction, email: str, dob: str):
+    try:
+        (cnx, cur) = db_connect()
+
+        # Find user with email = discord user id and dob = dob
+        dob_formatted = db_format_dob(dob)
+        cur.execute("SELECT * FROM users WHERE LOWER(email) = LOWER(%s) AND char_delete_password = %s", (interaction.user.id, dob_formatted))
+        user = cur.fetchone()
+        if user == None:
+            await send_tmp_message("User not found. Ensure you that have a user tied to your discord id and have entered a valid date of birth.", interaction)
+            return
+
+        # Make sure email is not in use
+        cur.execute("SELECT * FROM users WHERE LOWER(email) = LOWER(%s)", (email,))
+        if cur.fetchone() != None:
+            await send_tmp_message("This email is already in use. Please use a different email.", interaction)
+            return
+
+        # Update user email to email, set verified = 0
+        user_id = user[0]
+        cur.execute("UPDATE users SET email = %s, verified = 0 WHERE ID = %s", (email, user_id))
+        cnx.commit()
+
+        # Send email
+        await send_tmp_message("Account migrated successfully. Please check your email to verify your account.", interaction)
+
+        # Fire and forget
+        requests.post(
+            f"{variables.WEB_HOST_BACKEND}/register-resend.php",
+            data=json.dumps({ "email": email }),
+            headers={ "Content-Type": "application/json" }
+        )
     except mariadb.Error as e:
         await log(f"Database error occurred on get voting link for user <@{interaction.user.id}>: {e}")
         return ('An unknown error occurred, please try again later!', False)

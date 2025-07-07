@@ -38,6 +38,10 @@ def db_format_dob(dob: str):
 def validate_referral_code(code: str):
     return re.match(r"[A-Fa-f\d]{8}", code) != None
 
+def validate_email(email: str):
+    email_regex = r"^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$"
+    return re.match(email_regex, email) is not None
+
 def get_ban_reason(reason: int):
     if reason == 1: return 'hacking'
     elif reason == 2: return 'botting'
