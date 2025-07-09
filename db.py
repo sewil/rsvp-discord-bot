@@ -422,12 +422,14 @@ async def db_migrate_account(interaction: discord.Interaction, email: str, dob: 
         cur.execute("SELECT * FROM users WHERE LOWER(email) = LOWER(%s) AND char_delete_password = %s", (interaction.user.id, dob_formatted))
         user = cur.fetchone()
         if user == None:
+            await log(f"User <@{interaction.user.id}> failed to migrate account with email `{email}` and dob `{dob}`")
             await send_tmp_message("User not found. Ensure you that have a user tied to your discord id and have entered a valid date of birth.", interaction)
             return
 
         # Make sure email is not in use
         cur.execute("SELECT * FROM users WHERE LOWER(email) = LOWER(%s)", (email,))
         if cur.fetchone() != None:
+            await log(f"User <@{interaction.user.id}> tried to migrate account with already existing email `{email}`, using dob `{dob}`")
             await send_tmp_message("This email is already in use. Please use a different email.", interaction)
             return
 
@@ -438,6 +440,7 @@ async def db_migrate_account(interaction: discord.Interaction, email: str, dob: 
 
         # Send email
         await send_tmp_message("Account migrated successfully. Please check your email to verify your account.", interaction)
+        await log(f"User <@{interaction.user.id}> migrated account successfully with email `{email}` and dob `{dob}`")
 
         # Fire and forget
         requests.post(
