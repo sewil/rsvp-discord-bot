@@ -166,45 +166,6 @@ async def update_server_info(channel: discord.TextChannel):
 @client.event
 async def on_ready():
     await tree.sync(guild=guild)
-
-    # Send access buttons
-    access_channel = client.get_channel(variables.CHANNEL_ACCESS_ID)
-
-    if access_channel is None:
-        raise f"Access channel not found!"
-
-    print(f"Sending access buttons...")
-
-    # # Add register view
-    # register_view = discord.ui.View(timeout=None)
-    # register_view.add_item(RegisterButton())
-    # register_view.add_item(ResetPasswordButton())
-    # register_view.add_item(ReferralButton())
-
-    # # Add download view
-    # download_view = discord.ui.View(timeout=None)
-    # download_view.add_item(DownloadButton(variables.DOWNLOAD_URL))
-    # download_view.add_item(VoteButton())
-
-    await access_channel.purge(limit=10, check=is_me)
-    migrate_view = discord.ui.View(timeout=None)
-    migrate_view.add_item(MigrateAccountButton())
-    await access_channel.send(view=migrate_view, content="Accounts are now managed via the website at https://openmg.net/. To log in on the website, you will first need to migrate your account from your Discord account to an email. Press below to start the migration process.", silent=True)
-    # await update_server_info(access_channel)
-    # await access_channel.send(view=register_view, silent=True)
-    # await access_channel.send(view=download_view, silent=True)
-
-    # # Rankings button
-    # rankings_channel = client.get_channel(variables.CHANNEL_RANKINGS_ID)
-    # rankings_view = discord.ui.View(timeout=None)
-    # rankings_view.add_item(RankingsButton())
-    # await rankings_channel.purge(limit=10, check=is_me)
-    # await rankings_channel.send(view=rankings_view, silent=True)
-
     print("Ready!")
-
-    # while True:
-    #     await asyncio.sleep(60)
-    #     await update_server_info(access_channel)
 
 client.run(variables.TOKEN)
