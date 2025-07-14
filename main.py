@@ -104,12 +104,9 @@ async def show_rankings(interaction: discord.Interaction, state: db.RankingsStat
         if 'cnx' in locals(): cnx.close()
 
 @app_commands.checks.has_any_role(variables.GM_ROLE, variables.GM_INTERN_ROLE)
-@tree.command(name='find', description='Find in-game user.', guild=guild)
-async def find_user(interaction: discord.Interaction, user: discord.User = None, charname: str = None, username: str = None):
-    if user == None and charname == None and username == None:
-        await interaction.response.send_message('Must provide either discord user, charname or username!', ephemeral=True)
-        return
-    await db.db_find_user(interaction, str(user.id) if user != None else None, charname, username)
+@tree.command(name='find', description='Find in-game user. Searches for email, user id, character names, and username.', guild=guild)
+async def find_user(interaction: discord.Interaction, query: str):
+    await db.db_find_user(interaction, query)
 
 def is_me(member):
     return member.author == client.user

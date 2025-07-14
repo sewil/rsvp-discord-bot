@@ -319,7 +319,7 @@ def format_char(row):
         text = f"~~{text}~~"
     return text
 
-async def db_find_user(interaction: discord.Interaction, discord_id: str = None, charname: str = None, username: str = None):
+async def db_find_user(interaction: discord.Interaction, query: str):
     try:
         (cnx, cur) = db_connect()
         cur.execute(f"""
@@ -328,8 +328,8 @@ async def db_find_user(interaction: discord.Interaction, discord_id: str = None,
 	            characters.`name`, characters.`level`, characters.`job`, characters.`deleted_at`, characters.ID
             FROM users
             LEFT JOIN characters ON characters.userid = users.ID
-            WHERE LOWER(email) = LOWER(%s) OR LOWER(characters.`name`) = LOWER(%s) OR LOWER(users.`username`) = LOWER(%s)
-        """, (discord_id,charname,username))
+            WHERE users.ID = %s OR LOWER(email) = LOWER(%s) OR LOWER(characters.`name`) = LOWER(%s) OR LOWER(users.`username`) = LOWER(%s)
+        """, (query,query,query,query))
         results = cur.fetchall()
         if len(results) == 0:
             await send_tmp_message("User not found!", interaction)
@@ -348,9 +348,7 @@ async def db_find_user(interaction: discord.Interaction, discord_id: str = None,
             
         registered_at = datetime.strftime(user[6], "%Y-%m-%d %H:%M")
         
-        discord_user = f"<@{user[2]}>." if user[2] != None and len(user[2]) > 0 else 'Not found!'
-
-        message = f'Found user {user[1]} (userid {user[0]}). Discord user: {discord_user} GM Level: {user[3]}. Account registered at {registered_at}.{f" Banned until {banned_until} for {ban_reason}." if banned_until != None else ""}'
+        message = f'Found user {user[1]} (userid {user[0]}). Email: {user[2]} GM Level: {user[3]}. Account registered at {registered_at}.{f" Banned until {banned_until} for {ban_reason}." if banned_until != None else ""}'
         message += f'\n### Characters\n'
         if (len(characters) == 0):
             message += "No characters found!"
